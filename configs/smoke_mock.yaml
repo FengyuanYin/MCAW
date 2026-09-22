@@ -1,0 +1,48 @@
+project:
+  name: traceguard_smoke
+  output_dir: outputs/smoke
+  seed: 42
+backend: mock
+device: cpu
+precision: fp32
+model:
+  image_size: 64
+  message_bits: 32
+  max_linf: 0.062745098
+  adapter_channels: 16
+  wam:
+    root: third_party/watermark-anything
+    params: third_party/watermark-anything/checkpoints/params.json
+    checkpoint: checkpoints/wam_mit.pth
+    trainable: adapter_only
+  proxy:
+    kind: mock
+    silencer_root: third_party/Silencer
+    hallo_root: third_party/hallo
+    hallo_config: third_party/hallo/configs/train/stage2.yaml
+    pretrained_root: pretrained_models
+    target: clean_reference
+train:
+  stage: joint_proxy
+  manifest: data/smoke.jsonl
+  batch_size: 1
+  num_workers: 0
+  steps: 2
+  gradient_accumulation: 1
+  learning_rate: 0.001
+  weight_decay: 0.0
+  checkpoint_every: 1
+loss:
+  watermark: 1.0
+  detection: 0.25
+  visual_l1: 2.0
+  adversarial: 0.5
+  coupling: 0.1
+  robustness: 0.25
+distortions:
+  enabled: true
+  probability: 1.0
+  jpeg_quality: [70, 90]
+  resize_scale: [0.8, 1.0]
+  crop_scale: [0.9, 1.0]
+

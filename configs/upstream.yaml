@@ -1,0 +1,11 @@
+upstreams:
+  wam:
+    root: third_party/watermark-anything
+    commit: 2c08af04d037d5667c02f6ddebbda9ff04581c3e
+  silencer:
+    root: third_party/Silencer
+    commit: 78b1c5dc50548f4659944d9694d18a311eeac7c5
+  hallo:
+    root: third_party/hallo
+    commit: 8fd7c572a3d43c2a9c1a5473219ce4fc1b6e3ed2
+

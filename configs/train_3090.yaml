@@ -1,0 +1,49 @@
+project:
+  name: traceguard_wam_hallo
+  output_dir: outputs/train_3090
+  seed: 42
+backend: real
+device: cuda
+precision: fp16
+model:
+  image_size: 256
+  message_bits: 32
+  max_linf: 0.062745098
+  adapter_channels: 48
+  wam:
+    root: third_party/watermark-anything
+    params: third_party/watermark-anything/checkpoints/params.json
+    checkpoint: checkpoints/wam_mit.pth
+    trainable: adapter_only
+  proxy:
+    kind: silencer_latent
+    silencer_root: third_party/Silencer/Silencer-I
+    hallo_root: third_party/hallo
+    hallo_config: third_party/hallo/configs/train/stage2.yaml
+    pretrained_root: pretrained_models
+    target: clean_reference
+train:
+  stage: joint_proxy
+  manifest: data/train.jsonl
+  batch_size: 1
+  num_workers: 2
+  steps: 10000
+  gradient_accumulation: 8
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  checkpoint_every: 500
+  sample_every: 100
+  video_validate_every: 2000
+loss:
+  watermark: 1.0
+  detection: 0.25
+  visual_l1: 2.0
+  adversarial: 0.5
+  coupling: 0.1
+  robustness: 0.25
+distortions:
+  enabled: true
+  probability: 0.5
+  jpeg_quality: [55, 95]
+  resize_scale: [0.75, 1.0]
+  crop_scale: [0.85, 1.0]

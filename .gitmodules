@@ -1,0 +1,9 @@
+[submodule "third_party/watermark-anything"]
+	path = third_party/watermark-anything
+	url = https://github.com/facebookresearch/watermark-anything.git
+[submodule "third_party/Silencer"]
+	path = third_party/Silencer
+	url = https://github.com/yuangan/Silencer.git
+[submodule "third_party/hallo"]
+	path = third_party/hallo
+	url = https://github.com/fudan-generative-vision/hallo.git
