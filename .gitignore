@@ -6,10 +6,13 @@ __pycache__/
 .ruff_cache/
 .venv/
 env/
-outputs/
-checkpoints/
-pretrained_models/
-data/
+# 只忽略仓库根目录下由运行产生的目录。
+# 注意：不能写成 `data/`，未加前导斜杠的模式会匹配任意层级的同名目录，
+# 从而把源码包 `src/traceguard/data/` 一并忽略，导致克隆下来缺少该模块。
+/outputs/
+/checkpoints/
+/pretrained_models/
+/data/
 *.pt
 *.pth
 *.ckpt
