@@ -23,6 +23,9 @@ hallo = [
   "accelerate>=0.28",
   "diffusers>=0.27,<0.30",
   "einops>=0.7",
+  # transformers 4.4x 要求 huggingface-hub>=0.23.2,<1.0；diffusers 的 AutoencoderKL
+  # 导入会连带导入 transformers，装到 2.x 会让 S11 的 SilencerLatentProxy 直接失败。
+  "huggingface-hub>=0.23.2,<1.0",
   "insightface>=0.7",
   "omegaconf>=2.3",
   "transformers>=4.38,<4.43",
