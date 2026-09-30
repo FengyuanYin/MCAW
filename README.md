@@ -52,7 +52,7 @@ traceguard train --config configs/train_3090.yaml
 traceguard protect --config configs/train_3090.yaml --image input.png --message 01010101010101010101010101010101 --output protected.png
 traceguard decode-image --config configs/train_3090.yaml --image protected.png
 traceguard decode-video --config configs/evaluate.yaml --video generated.mp4
-traceguard evaluate --config configs/evaluate.yaml --manifest examples/authorized_manifest.jsonl
+traceguard evaluate --config configs/evaluate.yaml --manifest examples/authorized_manifest.jsonl --baseline wam
 traceguard verify-upstreams
 ```
 
@@ -67,7 +67,7 @@ traceguard verify-upstreams
 
 The first real training stage uses Silencer's latent/reference-feature attack route (`silencer_latent`) because it is the path that fits reliably on one 3090. Full Hallo video generation is an independent no-gradient validation command; audio-control nullification claims must be based on those video metrics, not on the latent proxy loss alone.
 
-`naive_joint` and `message_coupled` share the same inference architecture but must be trained with coupling weight 0 and non-zero respectively. Evaluate them in separate runs with their corresponding checkpoints; using one checkpoint for both is only an interface smoke check, not a valid ablation.
+`naive_joint` and `message_coupled` share the same inference architecture but must be trained with coupling weight 0 and non-zero respectively. Pass their distinct checkpoints with `--naive-checkpoint` and `--coupled-checkpoint` when evaluating these methods. The evaluator rejects a shared checkpoint and validates coupling weights (0 and 0.1 respectively).
 
 ## Upstream integrity
 

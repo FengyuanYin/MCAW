@@ -10,7 +10,10 @@ from traceguard.config import LoadedConfig, load_config
 from traceguard.preflight import checks_as_dicts, preflight_ok, run_preflight
 
 
-BASELINES = ("wam", "silencer", "wam_then_silencer", "silencer_then_wam", "naive_joint", "message_coupled")
+BASELINES = (
+    "wam", "silencer_latent_proxy", "wam_then_silencer_latent_proxy",
+    "silencer_latent_proxy_then_wam", "naive_joint", "message_coupled",
+)
 
 
 def _config(args: argparse.Namespace) -> LoadedConfig:
@@ -131,24 +134,48 @@ def command_reencode_video(args: argparse.Namespace) -> int:
 
 
 def command_evaluate(args: argparse.Namespace) -> int:
+    import math
+    import torch
+
     from traceguard.baselines import generate_baseline
     from traceguard.data.manifest import read_manifest
     from traceguard.evaluation import image_metrics
     from traceguard.evaluation.metrics import bit_accuracy
-    from traceguard.factory import build_proxy
+    from traceguard.factory import build_protector, build_proxy
     from traceguard.utils.images import load_image, parse_message
     from traceguard.utils.runtime import append_jsonl, seed_everything
 
     config, device, protector = _model(args)
     seed_everything(int(config.get("project.seed", 42)))
-    proxy = build_proxy(config, device)
     methods = args.baseline or list(BASELINES)
+    proxy = build_proxy(config, device) if any("proxy" in method for method in methods) else None
+    joint_paths = {
+        "naive_joint": args.naive_checkpoint,
+        "message_coupled": args.coupled_checkpoint,
+    }
+    selected = [name for name in joint_paths if name in methods]
+    if any(not joint_paths[name] for name in selected):
+        raise ValueError("Joint baselines require --naive-checkpoint and/or --coupled-checkpoint")
+    if len(selected) == 2 and Path(joint_paths[selected[0]]).resolve() == Path(joint_paths[selected[1]]).resolve():
+        raise ValueError("Naive and coupled baselines cannot share one checkpoint")
+    joint_models = {}
+    for name in selected:
+        path = Path(joint_paths[name]).resolve()
+        state = torch.load(path, map_location="cpu", weights_only=False)
+        expected = 0 if name == "naive_joint" else 0.1
+        actual = float(state.get("config", {}).get("loss", {}).get("coupling", float("nan")))
+        if not math.isfinite(actual) or abs(actual - expected) > 1e-8:
+            raise ValueError(f"{name} checkpoint coupling weight is {actual}; expected {expected}")
+        model = build_protector(config, device)
+        model.load_state_dict(state["model"], strict=True)
+        joint_models[name] = model.eval()
+        del state
     results_path = config.resolve("project.output_dir") / "evaluation.jsonl"
     for item in read_manifest(args.manifest):
         image = load_image(item.image, int(config.require("model.image_size"))).to(device)
         message = parse_message(item.message, int(config.require("model.message_bits")), device)
         for method in methods:
-            output = generate_baseline(method, image, message, protector, proxy, args.pgd_steps)
+            output = generate_baseline(method, image, message, protector, proxy, args.pgd_steps, joint_models)
             record = {
                 "sample_id": item.sample_id,
                 "method": method,
@@ -202,6 +229,8 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate = common("evaluate", command_evaluate)
     evaluate.add_argument("--manifest", required=True)
     evaluate.add_argument("--checkpoint")
+    evaluate.add_argument("--naive-checkpoint")
+    evaluate.add_argument("--coupled-checkpoint")
     evaluate.add_argument("--baseline", action="append", choices=BASELINES)
     evaluate.add_argument("--pgd-steps", type=int, default=10)
     return parser
