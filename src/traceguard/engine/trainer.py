@@ -124,7 +124,8 @@ class Trainer:
         return path
 
     def load_checkpoint(self, path: str | Path) -> None:
-        state = torch.load(path, map_location=self.device, weights_only=False)
+        # RNG snapshots must stay on CPU for torch.set_rng_state on resume.
+        state = torch.load(path, map_location="cpu", weights_only=False)
         self.protector.load_state_dict(state["model"])
         self.optimizer.load_state_dict(state["optimizer"])
         self.scaler.load_state_dict(state.get("scaler", {}))
