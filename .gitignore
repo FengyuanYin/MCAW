@@ -23,3 +23,22 @@ env/
 *.wav
 *.flac
 
+# Local credentials (keep shareable examples visible).
+.env
+.env.*
+!.env.example
+!.env.template
+/secrets/
+
+# Additional model assets and interrupted checkpoint writes.
+*.onnx
+*.model
+*.pth.tar
+*.pt.tmp
+*.pth.tmp
+*.ckpt.tmp
+*.safetensors.tmp
+
+# Additional generated video formats.
+*.mkv
+*.webm
