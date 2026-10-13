@@ -53,8 +53,8 @@ def generate_hallo_video(config: LoadedConfig, source_image: Path, driving_audio
     output.parent.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,
-        # 必须用绝对路径：下面把工作目录设成项目根目录，而不是 hallo_root。
-        str(hallo_root / "scripts" / "inference.py"),
+        "-m", "traceguard.adapters.hallo_verified",
+        "--hallo-root", str(hallo_root),
         "--config", str(runtime),
         "--source_image", str(source_image.resolve()),
         "--driving_audio", str(driving_audio.resolve()),

@@ -9,6 +9,26 @@ from torch.nn import functional as F
 from traceguard.types import ProtectionOutput, ProxyOutput
 
 
+def bounded_direction_alignment(
+    residual: torch.Tensor, direction: torch.Tensor, rms_floor: float = 1 / 255,
+) -> torch.Tensor:
+    """Smooth alignment with a pixel-scale floor at the zero-residual start.
+
+    Ordinary cosine normalization has a 1/eps derivative at zero. Here a
+    one-pixel-level RMS floor bounds that derivative, independently of image
+    resolution. Compute normalization in float32 for mixed precision training.
+    This is a revised objective, not an exact cosine near zero.
+    """
+    if rms_floor <= 0:
+        raise ValueError("Alignment RMS floor must be positive")
+    residual = residual.flatten(1).float()
+    direction = direction.detach().flatten(1).float()
+    unit_direction = F.normalize(direction, dim=1, eps=1e-12)
+    denominator = (residual.square().sum(1) + residual.shape[1] * rms_floor**2).sqrt()
+    alignment = (residual * unit_direction).sum(1) / denominator
+    return (1 - alignment).mean()
+
+
 @dataclass
 class JointLossOutput:
     total: torch.Tensor
@@ -40,9 +60,9 @@ class JointLoss(nn.Module):
         values["visual_l1"] = F.l1_loss(protection.protected_images, clean)
         values["adversarial"] = proxy.loss if proxy is not None else clean.new_zeros(())
         if adversarial_direction is not None:
-            residual = protection.adapter_residuals.flatten(1)
-            direction = adversarial_direction.flatten(1)
-            values["coupling"] = (1 - F.cosine_similarity(residual, direction, dim=1, eps=1e-8)).mean()
+            values["coupling"] = bounded_direction_alignment(
+                protection.adapter_residuals, adversarial_direction,
+            )
         else:
             values["coupling"] = clean.new_zeros(())
         if robust_decode_logits is not None:
